@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.best.ai_common.metrics.db.AiTokenUsageMapper">
+	<insert id="insertBatch">
+		insert into ai_token_usage
+		(user_id, service_name, profile, model_name,input_tokens,output_tokens,total_tokens, occurred_at)
+		values
+		    <foreach collection="list" item="it" separator=",">
+				(#{it.userId}, #{it.serviceName}, #{it.profile}, #{it.modelName},
+				#{it.inputTokens}, #{it.outputTokens}, #{it.totalTokens}, #{it.occurredAt})
+			</foreach>
+	</insert>
+
+	<resultMap id="userTokenUsageMap" type="com.best.ai_common.metrics.db.UserTokenUsage">
+		<constructor>
+			<arg column="user_id" javaType="java.lang.String"/>
+			<arg column="input_tokens"  javaType="java.lang.Long"/>
+			<arg column="output_tokens" javaType="java.lang.Long"/>
+			<arg column="total_tokens"  javaType="java.lang.Long"/>
+			<arg column="request_count" javaType="java.lang.Long"/>
+		</constructor>
+	</resultMap>
+
+	<select id="sumByUser" resultMap="userTokenUsageMap">
+		select user_id,
+		       sum(input_tokens) as input_tokens,
+		       sum(output_tokens) as output_tokens,
+		       sum(total_tokens) as total_tokens,
+		       count(*) as request_count
+		from ai_token_usage
+		where occurred_at &gt;= #{start} and occurred_at &lt; #{end}
+		group by user_id
+	</select>
+</mapper>

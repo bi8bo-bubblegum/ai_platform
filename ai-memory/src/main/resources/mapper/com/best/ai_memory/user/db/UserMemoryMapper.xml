@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.best.ai_memory.user.db.UserMemoryMapper">
+    <resultMap id="userMemoryMap" type="com.best.ai_memory.user.UserMemory">
+        <id     property="id"            column="id"/>
+        <result property="userId"        column="user_id"/>
+        <result property="content"       column="content"/>
+        <result property="embedding"     column="embedding"
+                typeHandler="com.best.ai_memory.user.db.FloatArrayTypeHandler"/>
+        <result property="sourceSession" column="source_session"/>
+        <result property="sourceAssistant" column="source_assistant"/>
+        <result property="createdAt"     column="created_at"/>
+    </resultMap>
+
+    <sql id="cols">id, user_id, content, embedding, source_session, source_assistant, created_at</sql>
+
+    <select id="selectByUserId" resultMap="userMemoryMap">
+        select <include refid="cols"/>
+        from ai_user_memory
+        where user_id = #{userId}
+        order by created_at DESC, id DESC
+        limit #{limit}
+    </select>
+
+    <select id="selectOldestIds" resultType="java.lang.Long">
+        select id
+        from ai_user_memory
+        where user_id = #{userId}
+        order by created_at ASC, id ASC
+        limit #{count}
+    </select>
+</mapper>

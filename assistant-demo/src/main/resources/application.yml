@@ -1,0 +1,64 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: assistant-demo
+  # Token 用量落库所需。ai-common 硬依赖 mybatis-plus，classpath 上必然有 DataSource 自动配置，
+  # 不配 url 启动就会报 "Failed to determine a suitable driver class"
+  datasource:
+    url: jdbc:mysql://localhost:3306/mcp_gateway?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  mvc:
+    async:
+      request-timeout: 120s
+ai:
+  chat:
+    profile: free
+    temperature: 0.7
+    max-tokens: 2000
+    timeout: 60s
+    endpoints:
+      free:
+        base-url: ${GATEWAY_BASE_URL}
+        api-key: ${GATEWAY_API_KEY}
+        model-name: best-1-nothinking
+  memory:
+    session:
+      store: redis
+      max-messages: 20
+      summary-enabled: true
+      summary-ttl: 96h
+      ttl: 48h
+    user:
+      enabled: true
+      top-k: 5
+      min-score: 0.30
+      extract-profile: free
+      dedup-threshold: 0.95
+      max-facts-per-user: 500
+  embed:
+    profile: default
+    dimensions: 1536
+    timeout: 5s
+    max-retries: 3
+    endpoints:
+      default:
+        base-url: ${CLOSEAI_BASE_URL}
+        api-key: ${CLOSEAI_API_KEY}
+        model-name: text-embedding-3-small
+  mcp:
+    enabled: true
+    tool-timeout: 60s
+    servers:
+      mcp_gateway:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: Bearer gw_KFSjH007EjqYW4S5CmsCoCzigeMpnPM0h3KMrnO_2jM
+        timeout: 30s

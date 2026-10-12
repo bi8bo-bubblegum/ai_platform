@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 平台 · 按需取用架构</title>
+<style>
+:root{
+  --bg:#ffffff; --bg-soft:#f8fafc; --bg-panel:#f1f5f9;
+  --ink:#0f172a; --ink-2:#334155; --ink-3:#64748b;
+  --line:#e2e8f0; --line-2:#cbd5e1;
+  --blue:#185fa5; --blue-soft:#e6f1fb; --blue-line:#85b7eb;
+  --amber:#8a5308; --amber-soft:#faeeda; --amber-line:#ef9f27;
+  --red:#96201f; --red-soft:#fcebeb; --red-line:#f09595;
+  --green:#2f5c11; --green-soft:#eaf3de; --green-line:#97c459;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75}
+.wrap{max-width:940px; margin:0 auto; padding:56px 28px 96px}
+h1{font-size:30px; font-weight:500; margin:0 0 10px}
+h2{font-size:21px; font-weight:500; margin:56px 0 16px; padding-bottom:10px; border-bottom:1px solid var(--line)}
+h3{font-size:16px; font-weight:500; margin:32px 0 10px}
+p{margin:0 0 14px; color:var(--ink-2)}
+code{font-family:ui-monospace,Menlo,monospace; font-size:13px;
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:4px; padding:1px 5px}
+pre{background:var(--bg-soft); border:1px solid var(--line); border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:13px}
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--ink-2)}
+th{background:var(--bg-soft); color:var(--ink); font-weight:500; white-space:nowrap}
+.note{border-radius:8px; padding:14px 18px; margin:0 0 18px; font-size:14px}
+.note.warn{background:var(--amber-soft); border:1px solid var(--amber-line); color:var(--amber)}
+.note.info{background:var(--blue-soft); border:1px solid var(--blue-line); color:var(--blue)}
+.note.ok{background:var(--green-soft); border:1px solid var(--green-line); color:var(--green)}
+.fig{margin:22px 0 26px; padding:20px; background:var(--bg-soft); border:1px solid var(--line); border-radius:12px}
+.fig svg{display:block; width:100%; height:auto}
+.fig .cap{font-size:12.5px; color:var(--ink-3); margin-top:12px; text-align:center}
+.toc{background:var(--bg-soft); border:1px solid var(--line); border-radius:10px; padding:14px 20px; columns:2; column-gap:32px}
+.toc a{color:var(--ink-2); text-decoration:none; display:block; padding:2px 0}
+.sub{font-size:14px; color:var(--ink-3); margin:0 0 26px}
+.lede{background:var(--bg-soft); border:1px solid var(--line); border-radius:10px; padding:18px 22px; margin:0 0 26px}
+.lede p{margin:0 0 10px}
+.lede p:last-child{margin:0}
+.yes{color:#2f5c11; font-weight:500}
+.no{color:#94a3b8}
+footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>AI 平台 · 按需取用架构</h1>
+<p class="sub">多种 AI 服务共用一套能力底座，各取所需 · v1.0 · 2026-10-10</p>
+
+<div class="lede">
+<p><strong>三条设计锚点：</strong></p>
+<p><strong>① 底座交付「可选 Bean」，不交付框架。</strong> —— 服务自己写 <code>AiServices.builder()</code>，底座不代劳装配，也不长成框架。</p>
+<p><strong>② 每个能力都能单独取用、也能单独不取。</strong> —— 一个只做结构化输出的服务，不该被迫理解什么叫会话窗口。</p>
+<p><strong>③ 计量与上下文自动生效，不需要显式取用。</strong> —— 它们是横切的，挂在模型实例上，服务侧零代码即可获得。</p>
+</div>
+
+<nav class="toc">
+<a href="#s1">1. 平台分层</a>
+<a href="#s2">2. 底座能力池</a>
+<a href="#s3">3. 各取所需：服务与能力的组合</a>
+<a href="#s4">4. 装配纪律：三个静默失效的开关</a>
+</nav>
+
+<h2 id="s1">1. 平台分层</h2>
+
+<p>服务层只写业务；底座层提供能力；上游是既有的基础设施 —— 底座不做路由、不做限流、不做凭证托管，那些在 <code>ai-gateway</code>。</p>
+
+<div class="fig">
+<svg viewBox="0 0 680 384" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>AI 平台分层：服务层各取所需，底座层提供可选能力，上游提供基础设施</title>
+<desc>服务层包含对话助手、单轮问答、轻量 AI 服务。底座层由 ai-common 与 ai-memory 两个模块组成，前者提供模型注册、计量与上下文、MCP 工具，后者提供会话记忆、长期记忆、检索注入。上游是 ai-gateway、MySQL、Redis 与 MCP 服务端。</desc>
+<defs>
+<marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+
+<rect x="40" y="40" width="600" height="90" rx="16" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="60" y="64" font-size="13" font-weight="500" fill="#042C53" dominant-baseline="central">服务层 · 只写业务</text>
+
+<rect x="60" y="76" width="180" height="40" rx="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.5"/>
+<text x="150" y="96" font-size="12" fill="#042C53" text-anchor="middle" dominant-baseline="central">对话助手</text>
+
+<rect x="250" y="76" width="180" height="40" rx="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="96" font-size="12" fill="#042C53" text-anchor="middle" dominant-baseline="central">单轮问答</text>
+
+<rect x="440" y="76" width="180" height="40" rx="8" fill="#B5D4F4" stroke="#185FA5" stroke-width="0.5"/>
+<text x="530" y="96" font-size="12" fill="#042C53" text-anchor="middle" dominant-baseline="central">轻量 AI 服务</text>
+
+<line x1="340" y1="132" x2="340" y2="158" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow1)"/>
+<text x="352" y="145" font-size="12" fill="#5F5E5A" dominant-baseline="central">各取所需 · 服务自行装配</text>
+
+<rect x="40" y="160" width="600" height="150" rx="16" fill="#EAF3DE" stroke="#3B6D11" stroke-width="0.5"/>
+<text x="60" y="184" font-size="13" font-weight="500" fill="#173404" dominant-baseline="central">底座层 · 可选能力池</text>
+
+<rect x="60" y="200" width="270" height="94" rx="8" fill="#C0DD97" stroke="#3B6D11" stroke-width="0.5"/>
+<text x="80" y="220" font-size="13" fill="#173404" dominant-baseline="central">ai-common</text>
+<text x="80" y="242" font-size="12" fill="#3B6D11" dominant-baseline="central">模型注册（chat / streaming / embed）</text>
+<text x="80" y="262" font-size="12" fill="#3B6D11" dominant-baseline="central">计量台账 · 调用上下文</text>
+<text x="80" y="282" font-size="12" fill="#3B6D11" dominant-baseline="central">MCP 工具客户端</text>
+
+<rect x="350" y="200" width="270" height="94" rx="8" fill="#C0DD97" stroke="#3B6D11" stroke-width="0.5"/>
+<text x="370" y="220" font-size="13" fill="#173404" dominant-baseline="central">ai-memory</text>
+<text x="370" y="242" font-size="12" fill="#3B6D11" dominant-baseline="central">会话记忆（窗口 + 摘要）</text>
+<text x="370" y="262" font-size="12" fill="#3B6D11" dominant-baseline="central">长期记忆（抽取 + 检索）</text>
+<text x="370" y="282" font-size="12" fill="#3B6D11" dominant-baseline="central">检索注入（ContentRetriever）</text>
+
+<line x1="340" y1="312" x2="340" y2="330" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow1)"/>
+<text x="340" y="348" font-size="12" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">上游：ai-gateway · MySQL · Redis · MCP 服务端</text>
+</svg>
+<p class="cap">图 1 平台分层：底座只提供能力、不提供装配，服务层的取用组合完全自由</p>
+</div>
+
+<div class="note info">
+<strong>依赖方向是单向的：</strong>服务 → <code>ai-memory</code> → <code>ai-common</code>。
+<code>ai-memory</code> 里的模型、计量、上下文全部来自 <code>ai-common</code>，它自己只实现"记忆"这一件事。
+</div>
+
+<h2 id="s2">2. 底座能力池</h2>
+
+<p>每个 Bean 都是可选的 —— 没有引用它的服务，它就不存在，也不会拖任何依赖进来。</p>
+
+<table>
+<tr><th>能力（Bean）</th><th>来源</th><th>作用</th></tr>
+<tr><td><code>ChatModel</code></td><td>ai-common</td><td>同步对话、结构化输出、文本生成、摘要与事实抽取</td></tr>
+<tr><td><code>StreamingChatModel</code></td><td>ai-common</td><td>流式对话（SSE 逐字输出）</td></tr>
+<tr><td><code>EmbeddingModel</code></td><td>ai-common</td><td>向量化。长期记忆的写入与检索都依赖它</td></tr>
+<tr><td><code>ChatMemoryProvider</code></td><td>ai-memory</td><td>会话记忆：窗口裁剪 + 滑出内容自动摘要</td></tr>
+<tr><td><code>RetrievalAugmentor</code></td><td>ai-memory</td><td>每轮自动检索用户长期事实并注入提示词</td></tr>
+<tr><td><code>McpToolProvider</code></td><td>ai-common</td><td>工具调用。<strong>当前已装配、尚无消费者</strong>，接工具时才用得上</td></tr>
+<tr><td><code>TokenUsageRecorder</code></td><td>ai-common</td><td>token 台账落库。<strong>自动挂</strong>，服务侧零代码</td></tr>
+<tr><td><code>AiCallContext</code></td><td>ai-common</td><td>用户 / 租户 / 助手 / 会话 / 链路五个标识的载体</td></tr>
+</table>
+
+<h2 id="s3">3. 各取所需：服务与能力的组合</h2>
+
+<p>"取用"不是全有或全无，而是一张可以自由勾选的清单。</p>
+
+<table>
+<tr><th>能力</th><th>对话助手</th><th>单轮问答</th><th>轻量 AI 服务</th></tr>
+<tr><td><code>ChatModel</code></td><td class="yes">●</td><td class="yes">●</td><td class="yes">●</td></tr>
+<tr><td><code>StreamingChatModel</code></td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td></tr>
+<tr><td><code>EmbeddingModel</code></td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td></tr>
+<tr><td><code>ChatMemoryProvider</code></td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td><code>RetrievalAugmentor</code></td><td class="yes">●</td><td class="yes">●</td><td class="no">○</td></tr>
+<tr><td><code>McpToolProvider</code></td><td class="yes">●</td><td class="no">○</td><td class="no">○</td></tr>
+<tr><td>计量 / 上下文</td><td>自动</td><td>自动</td><td>自动</td></tr>
+</table>
+
+<p>三个形态的差别可以一句话说清：</p>
+<ul>
+<li><strong>对话助手</strong>：全取。它是唯一同时需要"记住上一句"和"调用外部系统"的形态。</li>
+<li><strong>单轮问答</strong>：取检索、不取会话记忆。每次都从长期记忆里捞事实，但不保留对话历史。适用于"一次问清"的场景。</li>
+<li><strong>轻量 AI 服务</strong>：只取 <code>ChatModel</code>。做结构化输出（返回 POJO）或简单文本生成，不需要记忆、检索、工具、流式。</li>
+</ul>
+
+<div class="note ok">
+<strong>这张表是这张架构图最有价值的部分。</strong>它说明底座的能力划分是"可组合"的 ——
+如果一个能力无法被单独取用（比如"要记忆就必须同时引入工具"），那说明底座切错了。
+</div>
+
+<h2 id="s4">4. 装配纪律：三个静默失效的开关</h2>
+
+<p>服务侧的装配长这样。它只有五行，但<strong>其中三行漏了都不会报错</strong>：</p>
+
+<pre>@Bean
+public ChatAssistant chatAssistant(ChatModelRegister chatModelRegister,
+                                   StreamingChatModelRegister streamingRegister,
+                                   ChatMemoryProvider chatMemoryProvider,
+                                   ObjectProvider&lt;RetrievalAugmentor&gt; augmentorProvider) {
+    var builder = AiServices.builder(ChatAssistant.class)
+            .chatModel(chatModelRegister.getDefault())                    // ← 必需
+            .streamingChatModel(streamingRegister.getDefault())           // ← 流式必需
+            .chatMemoryProvider(chatMemoryProvider);                      // ← 漏了：不记得上一句
+    augmentorProvider.ifAvailable(builder::retrievalAugmentor);           // ← 漏了：长期事实注入不进去
+    return builder.build();
+}</pre>
+
+<table>
+<tr><th>开关</th><th>挂在哪</th><th>漏了的症状</th><th>有扩展点吗</th></tr>
+<tr><td><code>.chatMemoryProvider(...)</code></td><td>装配处</td><td>不记得上一句</td><td>有</td></tr>
+<tr><td><code>.retrievalAugmentor(...)</code></td><td>装配处</td><td>长期事实永远注入不进去</td><td>有</td></tr>
+<tr><td><code>recorder.recordAsync(...)</code></td><td><strong>控制器手动调</strong></td><td>长期事实永远不增长</td><td><strong>没有</strong></td></tr>
+</table>
+
+<div class="note warn">
+<strong>三者都不报错。</strong>也就是说 —— <em>"助手不记得上一句"和"长期记忆一条都没写进去"，从日志上看都像正常。</em>
+<br><br>
+这是选择"弱契约"的必然代价：底座不替你做装配，就不能替你保证装配正确。
+<strong>所以那份接入清单和钉住这三个开关的结构测试，和代码同等重要</strong> —— 它们是这个选择能成立的前提。
+</div>
+
+<h3>为什么"写"没有扩展点</h3>
+
+<p>LangChain4j 的挂载点全在<strong>调用链内部</strong>（<code>ContentRetriever</code> / <code>ChatMemoryStore</code> / <code>ChatModelListener</code>），
+而"这一轮值不值得长期记住"是<strong>业务判断</strong> —— 框架不知道、也不该知道。所以它只能在响应结束后由服务自己触发。</p>
+
+<footer>
+<p>文档版本 v1.0 · 2026-10-10 · 依据当前代码：ai-common（20 个源文件）+ ai-memory（27 个源文件）+ assistant-demo</p>
+</footer>
+
+</div>
+</body>
+</html>

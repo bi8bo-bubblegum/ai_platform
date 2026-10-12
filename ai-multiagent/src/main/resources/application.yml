@@ -1,0 +1,78 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ai-multiagent
+  datasource:
+    url: jdbc:mysql://localhost:3306/mcp_gateway?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+ai:
+  chat:
+    profile: free
+    temperature: 0.7
+    max-tokens: 2000
+    timeout: 60s
+    endpoints:
+      free:
+        base-url: ${GATEWAY_BASE_URL}
+        api-key: ${GATEWAY_API_KEY}
+        model-name: best-1-nothinking
+  memory:
+    session:
+      store: redis
+      max-messages: 20
+      summary-enabled: true
+      summary-ttl: 96h
+      ttl: 48h
+    user:
+      enabled: true
+      top-k: 5
+      min-score: 0.30
+      extract-profile: free
+      dedup-threshold: 0.95
+      max-facts-per-user: 500
+  embed:
+    profile: default
+    dimensions: 1536
+    timeout: 5s
+    max-retries: 3
+    endpoints:
+      default:
+        base-url: ${CLOSEAI_BASE_URL}
+        api-key: ${CLOSEAI_API_KEY}
+        model-name: text-embedding-3-small
+  mcp:
+    enabled: true
+    tool-timeout: 60s
+    servers:
+      order:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_Q59o9D9VWvXfL2xdCUV4Tg-CJol4yXLbNTgluKmXKiY"
+        timeout: 30s
+      analysis:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_k-DDgbCiUwQXyVICTPY1AP4VKakE8ZFHjbB2B9X0aGs"
+        timeout: 30s
+      knowledge:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_YBdiinb0uOlQ-HBhUGXtZVBYLMGMNFgW-VHmXyYtfuI"
+        timeout: 30s
+  multiagent:
+    # 长期记忆的归属标识，和 assistant-demo 的不同
+    assistant-id: ai-multiagent
+    # checkpoint 的 TTL（小时）
+    checkpoint-ttl-hours: 24
