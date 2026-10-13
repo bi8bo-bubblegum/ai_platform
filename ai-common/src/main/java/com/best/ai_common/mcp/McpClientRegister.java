@@ -67,7 +67,8 @@ public class McpClientRegister implements AutoCloseable{
                     throw new IllegalArgumentException("http 传输必须配置 url");
                 }
                 StreamableHttpMcpTransport.Builder b = new StreamableHttpMcpTransport.Builder()
-                        .url(server.getUrl());
+                        .url(server.getUrl())
+                        .setHttpVersion1_1();
                 if(server.getHeaders() != null && !server.getHeaders().isEmpty()){
                     b.customHeaders(server.getHeaders());
                 }

@@ -1,4 +1,6 @@
 package com.best.ai_graph.expert;
 
-public class Expert {
+public interface Expert {
+
+    String rules();
 }

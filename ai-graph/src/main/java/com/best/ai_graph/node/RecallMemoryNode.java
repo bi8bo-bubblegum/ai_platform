@@ -1,9 +1,9 @@
-package com.best.multiagent.node;
+package com.best.ai_graph.node;
 
 import com.best.ai_common.message.ChatMessageTexts;
+import com.best.ai_graph.state.MultiAgentState;
 import com.best.ai_memory.user.MemoryRecallService;
 import com.best.ai_memory.user.UserMemory;
-import com.best.multiagent.state.MultiAgentState;
 import dev.langchain4j.data.message.ChatMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +11,6 @@ import org.bsc.langgraph4j.action.NodeAction;
 
 import java.util.List;
 import java.util.Map;
-
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,12 +36,12 @@ public class RecallMemoryNode implements NodeAction<MultiAgentState> {
         return Map.of(MultiAgentState.MEMORY_CONTEXT, render(facts));
     }
 
-    private String render(List<UserMemory> facts){
-        if(facts.isEmpty()){
+    private String render(List<UserMemory> facts) {
+        if (facts.isEmpty()) {
             return "";
         }
         StringBuilder sb = new StringBuilder("[关于这位用户的已知信息，按时间倒序，若冲突以靠前的为准]\n");
-        for(UserMemory m : facts){
+        for (UserMemory m : facts) {
             sb.append("- ").append(m.getContent()).append('\n');
         }
         return sb.toString();

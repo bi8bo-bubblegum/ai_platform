@@ -1,14 +1,13 @@
-package com.best.multiagent.node;
+package com.best.ai_graph.node;
 
 import com.best.ai_common.mcp.McpClientRegister;
 import com.best.ai_common.mcp.McpToolCatalog;
 import com.best.ai_common.mcp.ToolRisk;
-import com.best.multiagent.state.MultiAgentState;
+import com.best.ai_graph.state.MultiAgentState;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.mcp.client.McpClient;
 import dev.langchain4j.service.tool.ToolExecutionResult;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.action.InterruptibleAction;
@@ -39,19 +38,18 @@ public class ToolExecuteNode implements NodeAction<MultiAgentState>, Interruptib
     @Override
     public Map<String, Object> apply(MultiAgentState state) throws Exception {
         String tool = state.proposedTool();
-        if(tool == null || tool.isBlank() || NO_TOOL.equals(tool)){
+        if(isNoTool(tool)){
             return Map.of();
         }
         if(state.approvalDecided() && !state.approved()){
-            log.info("工具 {} 被人工拒绝", tool);
-            return finishDone(AiMessage.from("[操作被拒绝] 已取消：" + tool
-                    + "。如果用户另有需要，可以改用别的方式帮他。"));
+            log.info("工具{}被人工拒绝", tool);
+            return finishDone(AiMessage.from("[操作被拒绝] 已取消：" + tool));
         }
         McpClient client = register.get(state.proposedBy());
         if(client == null){
-            log.error("找不到 MCP 客户端: clientKey={}，无法执行工具 {}",
-                    state.proposedBy(), tool);
-            return finishDone(AiMessage.from("[工具 " + tool + " 未能执行] 未配置" + state.proposedBy() + " 的MCP通道"));
+            log.error("找不到 MCP 客户端: clientKey={}，无法执行工具 {}", state.proposedBy(), tool);
+            return finishDone(AiMessage.from("[工具 " + tool + " 未能执行] 未配置 "
+                    + state.proposedBy() + " 的MCP通道"));
         }
         try {
             ToolExecutionRequest request = ToolExecutionRequest.builder()
@@ -64,7 +62,10 @@ public class ToolExecuteNode implements NodeAction<MultiAgentState>, Interruptib
             String text = result.resultText();
             log.info("工具执行{}: tool={} by={} result={}",
                     failed ? "返回错误" : "成功", tool, state.proposedBy(), abbreviate(text));
-            return finishContinue(AiMessage.from("[" + (failed ? "工具 " + tool + " 返回错误" : "工具 " + tool + " 结果") + "]\n" + text));
+            // ★ 走 finishContinue（不是 finishDone）：保留 proposedTool，
+            //   因为条件边要靠它判断"这一轮循环要不要继续"。
+            return finishContinue(AiMessage.from(
+                    "[" + (failed ? "工具 " + tool + " 返回错误" : "工具 " + tool + " 结果") + "]\n" + text));
         } catch (Exception e){
             log.error("工具执行异常: tool={} by={} args={}",
                     tool, state.proposedBy(), state.proposedArgs(), e);
@@ -78,11 +79,9 @@ public class ToolExecuteNode implements NodeAction<MultiAgentState>, Interruptib
         if(isNoTool(tool)){
             return Optional.empty();
         }
-
         if(state.approvalDecided()){
             return Optional.empty();
         }
-
         ToolRisk risk = toolCatalog.riskOf(tool);
         if(!risk.atLeast(approvalMinRisk)){
             log.info("工具 {} 危险等级={} 未达审批阈值={}，直接执行", tool, risk, approvalMinRisk);
@@ -93,12 +92,13 @@ public class ToolExecuteNode implements NodeAction<MultiAgentState>, Interruptib
                 .reason("工具 " + tool + " 危险等级为 " + risk + "，需要人工批准").build());
     }
 
+
     private static String abbreviate(String s){
         if(s == null){
             return "";
         }
-        String oneLine = s.replaceAll("\\s+", " ");
-        return oneLine.length() <= 200 ? oneLine : oneLine.substring(0,200) + "...(截断)" ;
+        String onLine = s.replaceAll("\\s+", " ");
+        return onLine.length() <= 200 ? onLine : onLine.substring(0, 200) + "...(截断)";
     }
 
     private Map<String, Object> finishContinue(AiMessage message){
@@ -119,4 +119,5 @@ public class ToolExecuteNode implements NodeAction<MultiAgentState>, Interruptib
     private static boolean isNoTool(String tool){
         return tool == null || tool.isBlank() || NO_TOOL.equals(tool);
     }
-}
+
+    }

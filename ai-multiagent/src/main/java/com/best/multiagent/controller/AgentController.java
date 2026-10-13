@@ -1,17 +1,14 @@
 package com.best.multiagent.controller;
 
-import com.best.multiagent.graph.GraphNodes;
-import com.best.multiagent.graph.GraphThreadIds;
-import com.best.multiagent.state.MultiAgentState;
+import com.best.ai_graph.graph.GraphNodes;
+import com.best.ai_graph.graph.GraphThreadIds;
+import com.best.ai_graph.state.MultiAgentState;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.bsc.langgraph4j.CompiledGraph;
-import org.bsc.langgraph4j.GraphInput;
-import org.bsc.langgraph4j.GraphInterruptException;
-import org.bsc.langgraph4j.RunnableConfig;
+import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.state.StateSnapshot;
 import org.springframework.web.bind.annotation.*;
 
@@ -83,8 +80,7 @@ public class AgentController {
     }
 
     private Map<String, Object> waiting(String threadId, RunnableConfig config){
-        StateSnapshot<MultiAgentState> snapshot = graph.getState(config);
-        MultiAgentState state = snapshot == null ? null : snapshot.state();
+        MultiAgentState state = graph.stateOf(config).map(NodeOutput::state).orElse(null);
         if(state == null){
             return Map.of("status", "waiting_approval", "threadId", threadId);
         }
@@ -97,12 +93,10 @@ public class AgentController {
     }
 
     private String nextNodeOf(RunnableConfig config){
-        StateSnapshot<MultiAgentState> snapshot = graph.getState(config);
-        if(snapshot == null){
-            return "";
-        }
-        String next = snapshot.nextNodeId();
-        return next == null ? "" : next;
+        return graph.stateOf(config)
+                .map(StateSnapshot::nextNodeId)
+                .filter(next -> next != null && !next.isBlank())
+                .orElse("");
     }
 
     private String lastAiText(List<ChatMessage> messages){

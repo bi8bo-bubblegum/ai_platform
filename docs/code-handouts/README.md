@@ -74,7 +74,8 @@
 | [36](36-multiagent建图最终版-createAgent.md) | ★ **最终版**：`createAgent(枚举, 调度器)` **两个参数**建整张图。含 `MultiAgentProperties`、Spring Bean 形态的工厂、加 expert 只改 2 处、加图应用的改动/不用改清单、**13 条陷阱**、四个验收用例 | **要建图或加图时只看这一份**。第 7 节列了它**不做**什么 |
 | [37](37-multiagent专家接口-完整提示词.md) | ⤵ **未采用**（保留作记录：记录了一个考虑过但否决的方案，以及"骨架方案为什么不需要占位符校验"） |
 | [38](38-multiagent专家接口最终版-骨架与准则.md) | ★ **专家接口最终版**：统一提示词骨架（框架契约写一处）+ 每个专家只写自己的**工作准则**。含"输出要求为什么必须留在骨架里"、`role` 不重复、**以及为什么骨架方案不需要那个占位符校验** | 要给某位专家定制准则时看这份；加一个 expert 只写 4~6 行 |
-
+| [39](39-ai-graph模块-完整抽取.md) | ★ **抽 `ai-graph` 模块（完整代码）**：19 个框架文件搬进新模块 + `ai-multiagent` 瘦成 6 个业务文件。核心是 **`SupervisorNode` 解绑**（引入 `RouteDecider`，`createAgent` 变 3 个参数）+ **走 `AutoConfiguration.imports` 自动装配**。含 pom/yml 改动、删除清单、三条建图期 fail-fast 校验 | **要建第二个图应用、或想落地 36/38 号时看这份**。第 6.3 节的 `grep com.best.multiagent ai-graph/src/` 必须返回 **0 行** |
+| [40](40-ai-graph抽取后修复.md) | **抽取后的编译修复**：`ai-multiagent` 的 pom 只剩 1 个依赖（缺 4 个）→ 编译失败；`AgentController` 3 行 import 未改；★ **`application.yml` 前缀没改但"三处碰巧等于默认值" → 完全静默**。含 `redisProperties` 标红的解释（IDE 索引问题，不是代码问题） | 39 号敲完之后**必看**；第 3.2 节"把 ttl 改成 48 看日志"是唯一能证明配置真被读到的检查 |
 > ⏸ **28 号已暂缓（2026-10-12）**：`ai-graph` 模块**暂不建** —— 5 个类的使用者只有
 > `ai-multiagent` 一个，按"数得出来几个使用者"的判据不该抽。
 > 触发条件：**出现第二个 langgraph4j 图应用时**再建，且那时要先建模块再让新应用写代码

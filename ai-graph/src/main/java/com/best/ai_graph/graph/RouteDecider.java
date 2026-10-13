@@ -1,4 +1,12 @@
 package com.best.ai_graph.graph;
 
-public class RouteDecider {
+
+import dev.langchain4j.data.message.ChatMessage;
+
+import java.util.List;
+
+@FunctionalInterface
+public interface RouteDecider {
+
+    ExpertRouting decide(List<ChatMessage> messages) throws Exception;
 }

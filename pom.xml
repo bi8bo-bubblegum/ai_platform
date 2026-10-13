@@ -13,6 +13,7 @@
         <module>assistant-demo</module>
         <module>ai-memory</module>
         <module>ai-multiagent</module>
+        <module>ai-graph</module>
     </modules>
 
     <parent>

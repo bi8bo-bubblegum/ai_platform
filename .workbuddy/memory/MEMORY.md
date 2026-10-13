@@ -14,6 +14,20 @@
 > （拒绝分支、`finish()` 收尾），用户在上百行里辨别不出来 → 漏敲 → 审批静默失效。
 > **一句话的成本，省一次漏敲。**
 
+> ⭐ **2026-10-13 规则收紧（40 号，同一类错误第 3 次）：**
+> **给"替换 / 删除 / 移动"类指令时，必须同时给出"操作完成后的完整状态"。**
+>
+> 三次的形态：
+> | 次数 | 我写的 | 漏掉的 |
+> |---|---|---|
+> | 30 号 | "完整替换这个文件" | 哪几行是新增的 |
+> | 31 号 | "多处按同样方式改掉" | 逐处列出 |
+> | **40 号** | "换一个依赖，**其余不动**" | **"其余"是哪几个** → 执行成"只留一个" → 编译失败 |
+>
+> **共同点：都写了"要改什么"（动作），没写"改完什么样"（目标）。**
+> **"其余不动"这四个字，在同时要动"1 换 + 1 删 + 5 留"的文件上完全不够用。**
+> → 本单改成**直接给完整的 pom.xml**。
+
 > ⭐ **命名原则：名字只在"需要区分"时才应该不同。**
 > 同一个东西在两层用两个名字（state 里叫 `proposedTool`、响应体里叫 `pendingAction`），
 > 每次读代码都要多花一分钟确认"这是不是同一个字段" —— 这一分钟就是"容易误导"的来源。
@@ -882,6 +896,28 @@ javadoc 才给**官方替代方案**（这次的 `GraphInput` 就是这么找到
 所以格式错会被调用方的 catch 接住 → **表现为"长期记忆永远写不进去但服务照跑"**。
 
 ### `ai-graph` 模块 —— 三次讨论的立场变化（★ 以最新一次为准）
+
+**★ 已落地：交付单 39（用户选"现在直接抽"）**
+- **注意**：34/36/37/38 号**从未落地** —— 39 号是"36/38 的设计 + 模块抽取一起做掉"
+- `createAgent(Class<E> routingEnum, RouteDecider decider, String fallbackEdgeKey)` —— **3 个参数**
+- 工厂改走 `AutoConfiguration.imports`（ai-graph 不被业务模块组件扫描）
+- 配置前缀 `ai.multiagent.*` → **`ai.graph.*`**
+- 依赖方向：`ai-multiagent → ai-graph → ai-memory → ai-common`
+
+**★ 落地的坑（交付单 40）**：
+- ★ **`@ConfigurationProperties` 前缀写错 = 配置全体失效 + 不报错**。
+  实测：yml 里 `ai.multiagent.*` 没改成 `ai.graph.*`，而三项默认值**恰好全等于**配的值
+  （`assistant-id` 默认取 `spring.application.name` = 配的值；`ttl` 都是 24；阈值都是 HIGH）
+  → **完全静默**。
+  **防线**：属性类的 key 有改动时，必须做一次"改一个值 → 看日志里的生效值"的验证；
+  **启动日志里那行"生效值"不是装饰，不要删。**
+- `ai-multiagent` 的 pom **只留了 `ai-graph` 一个依赖** → 缺
+  `spring-boot-starter-web` / `lombok` / `mysql-connector-j` / `langgraph4j-core`(+BOM)（BOM 不能少，
+  否则声明 core 时没有版本号）。
+  `langgraph4j-redis-saver` **不用加回**（RedisSaver 已搬进 ai-graph）。
+- **IDE 标红的判读**：`AiGraphAutoConfiguration` 的 `RedisProperties` 标红 ≠ 代码错
+  （Maven 编译 SUCCESS 已证）。根因是 **reactor 编译失败 → IDEA 延迟刷新模块依赖**。
+  **先修编译错误，再 Reload Maven。** 不要为消红去改 import 或加依赖。
 
 **★ 第三轮（2026-10-12 22:00 后）：用户要"把整套 ReAct 图抽成 `ai-graph`，其他模块直接依赖"
 → 结论【可以抽，签字】，与前两轮相反。** 立场变化的原因：**形状已收敛**
