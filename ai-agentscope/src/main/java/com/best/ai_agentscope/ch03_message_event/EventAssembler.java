@@ -44,6 +44,20 @@ public class EventAssembler {
         String reconstructed = text();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("replyId", replyId);
+        result.put("text", reconstructed);
+        result.put("modelCalls", modelCalls);
+        result.put("tools", tools.values().stream()
+                .map(t -> Map.<String, Object>of(
+                        "name", t.name,
+                        "args", t.args,
+                        "state", String.valueOf(t.state)
+                )).toList());
+        result.put("resultEventSeen", resultEventSeen);
+        if(resultEventSeen){
+            result.put("resultEventText", resultEventText);
+            result.put("matchesResultEvent", reconstructed.equals(resultEventText));
+        }
+        return result;
     }
 
     private String text(){
