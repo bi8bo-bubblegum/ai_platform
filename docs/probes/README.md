@@ -82,3 +82,60 @@ $JAVA_HOME/bin/java -cp "$CP" docs/probes/SubGraphProbe.java
 
 - `docs/code-handouts/30-multiagent工具接入-按危险等级中断.md`（第 6 节列了这个待验证点）
 - `docs/code-handouts/32-multiagent循环收进专家-扁平化ReAct.md`（改用条件边实现循环）
+
+---
+
+## JacksonProbe2.java —— 暂停/恢复链路真的能用吗？
+
+### 它回答的问题
+
+`ai-orchestrator` 的卖点是"可中断 / 可暂停 / 可恢复"，而恢复的全部依赖是
+**`RunState` 能完整地序列化进 Redis、再完整地读回来**。
+
+问题是这类故障**编译一律通过**：
+- record 风格的读方法（`runId()`）Jackson 不认 → 序列化出来是残骸
+- `isDone()` / `isFailed()` 符合 is-getter 约定 → 反序列化抛 `UnrecognizedPropertyException`
+- `Instant` 字段不注册 `JavaTimeModule` → 直接抛 `InvalidDefinitionException`
+
+三个断点全是这个探针抓出来的（43 号交付单第 0.5 节有完整记录）。
+
+### 它测什么
+
+11 个类型逐个 `序列化 → 反序列化 → 断言字段`：
+`Budget · TaskOutcome(done/failed) · WorkerTurn · PendingApproval · RunEvent ·
+TaskNode(待审批态) · TaskNode(已完成态) · Plan · RunState(总装) · 再序列化`
+
+### 怎么跑
+
+```bash
+# 43 号交付单第 14 节有完整命令（classpath 要按 jackson 版本精确挑 jar，
+# .m2 里 2.15.x 会和 Boot 的 2.21.4 行为不一致）
+```
+
+### 什么时候必须重跑
+
+改 `core/` 任何字段、加减 `RunEvent` 字段、动 `RedisRunStateStore` 之后。
+**"编译通过"从来不等于"恢复能用"** —— 这个探针就是两者之间的那道闸。
+
+---
+
+## UserMessageProbe.java —— AiService 方法的 @UserMessage 补齐了吗？
+
+### 它回答的问题
+
+LangChain4j 要求**每个 AiService 方法必须有 `@UserMessage`**，缺了它：
+启动不报、构建代理不报，**调用时才抛** `IllegalConfigurationException:
+The method 'xxx' does not have a user message defined`。
+
+2026-10-14 实测：`WorkerAgent.turn` 和 `Synthesizer.synthesize` 全参数都是 `@V`，
+两个都栽在这条上（Planner 有 `@UserMessage` 所以没事 —— 对照组）。
+
+### 它怎么验
+
+不依赖网络：构造 AiServices（指向必然连不上的假端点）→ 调一次方法 →
+**期望异常不是 `IllegalConfigurationException`**（走到 HTTP 阶段报 ConnectException 就对了）。
+
+### 什么时候必须重跑
+
+新增/修改任何 AiService 接口方法时。**判据**：新方法只要没有 `@UserMessage` 参数，
+本探针立刻红。

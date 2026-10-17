@@ -10,6 +10,8 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/ai-graph/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-multiagent/pom.xml" />
         <option value="$PROJECT_DIR$/assistant-customer/pom.xml" />
       </set>
     </option>

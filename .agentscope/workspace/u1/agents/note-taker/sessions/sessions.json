@@ -1,0 +1,13 @@
+{
+  "sessions" : {
+    "s1" : {
+      "summary" : "transcript updated (5 entries)",
+      "updatedAt" : "2026-10-16T06:51:10.417706Z"
+    },
+    "s2" : {
+      "summary" : "transcript updated (5 entries)",
+      "updatedAt" : "2026-10-16T07:01:34.904333Z"
+    }
+  },
+  "version" : 1
+}

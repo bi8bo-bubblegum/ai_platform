@@ -76,11 +76,21 @@
 | [38](38-multiagent专家接口最终版-骨架与准则.md) | ★ **专家接口最终版**：统一提示词骨架（框架契约写一处）+ 每个专家只写自己的**工作准则**。含"输出要求为什么必须留在骨架里"、`role` 不重复、**以及为什么骨架方案不需要那个占位符校验** | 要给某位专家定制准则时看这份；加一个 expert 只写 4~6 行 |
 | [39](39-ai-graph模块-完整抽取.md) | ★ **抽 `ai-graph` 模块（完整代码）**：19 个框架文件搬进新模块 + `ai-multiagent` 瘦成 6 个业务文件。核心是 **`SupervisorNode` 解绑**（引入 `RouteDecider`，`createAgent` 变 3 个参数）+ **走 `AutoConfiguration.imports` 自动装配**。含 pom/yml 改动、删除清单、三条建图期 fail-fast 校验 | **要建第二个图应用、或想落地 36/38 号时看这份**。第 6.3 节的 `grep com.best.multiagent ai-graph/src/` 必须返回 **0 行** |
 | [40](40-ai-graph抽取后修复.md) | **抽取后的编译修复**：`ai-multiagent` 的 pom 只剩 1 个依赖（缺 4 个）→ 编译失败；`AgentController` 3 行 import 未改；★ **`application.yml` 前缀没改但"三处碰巧等于默认值" → 完全静默**。含 `redisProperties` 标红的解释（IDE 索引问题，不是代码问题） | 39 号敲完之后**必看**；第 3.2 节"把 ttl 改成 48 看日志"是唯一能证明配置真被读到的检查 |
+| [41](41-多agent架构调研与诊断.md) | **多智能体调研与诊断**（7 份原始文献：Anthropic ×2 / Cognition / OpenAI Agents SDK / LangGraph / Loop Engineering / Spring AI Alibaba）。核心结论：现在这套是 **routing workflow 被当成 agent 来做**；三个 expert **没有上下文隔离** → **拿到多智能体的全部复杂度成本、没拿到任何一项收益**。含五个构件缺三个的自查 + 反模式清单 | **重新规划多智能体之前先看这份**。第 6 节「为什么不用 Spring AI Alibaba Graph」是项目纪律要求必须回答的；第 7 节 6 个待裁定问题答完才出方案 |
+| [42](42-底座能力清单与验收台路线图.md) | **底座能力清单 × 验收台**：11 项已验收（含 `assistant-demo` 的流式 / RAG 装配 / 摘要记忆）+ **5 项未验收**（上下文隔离 / 并行 / 终止条件 / 交接协议 / 真实鉴权），每项带**触发条件**。含"名字在承诺它没验证的东西"与 `ai-graph` 定位混淆的诊断 | **想知道底座现在能承诺什么时看这份**。第 4.3 节点出 2 项"不需要真实需求就能做对"的改动；第 5 节 4 个待裁定 |
 > ⏸ **28 号已暂缓（2026-10-12）**：`ai-graph` 模块**暂不建** —— 5 个类的使用者只有
 > `ai-multiagent` 一个，按"数得出来几个使用者"的判据不该抽。
 > 触发条件：**出现第二个 langgraph4j 图应用时**再建，且那时要先建模块再让新应用写代码
 > （否则会 `import com.best.multiagent.graph.*`，业务模块依赖业务模块，比不抽更糟）。
 > 28 号里的判据本身仍然有效，保留备查。
+>
+> ⚠️ **39/40 号已作废（2026-10-14）**：`ai-graph` / `ai-multiagent` **已确认弃用**，
+> 取代它们的是 [43 号 `ai-orchestrator`](43-ai-orchestrator完整模块.md)（不用 langgraph4j）。
+> 39/40 保留备查（`RouteDecider` 解绑思路 / "其余不动"的教训 / `redisProperties` 标红的判读）。
+
+| [43](43-ai-orchestrator完整模块.md) | ★ **`ai-orchestrator` 完整模块（26 个 java 文件）**：一次动态分解 + 并行执行 + 结构化汇总，**不用 langgraph4j**（第 2 节给了不用它的 4 条理由 + 上图的触发条件）。12 项能力：显式 scope / 上下文隔离 / 子任务内 ReAct / 结构化交接 / **循环迭代** / 组合式终止 / 预算兜底 / 错误显式标记 / 人在回路 / 可暂停可恢复（内存 + Redis）/ 可观测四事件 / 会话历史接入。**代码已在临时副本编译通过（BUILD SUCCESS），并与源码逐字节比对一致** | **建多智能体只看这一份**。第 7 节按依赖顺序分 5 批敲，每批敲完编译一次；第 9 节 9 个验收用例中**第 3（多轮对话）和第 6（连续两次高危）是唯一能发现静默失效的两条**。⚠️ 其 yml 配角色的形态**已被 44 号取代** |
+| [44](44-ai-orchestrator拆分-框架零业务.md) | ★ **`ai-orchestrator` 拆分：框架零业务 + `ai-orchestrator-demo` 验收台**。角色表从 yml 搬进代码（`Roles` 枚举 + 每个角色一个 `RoleRules` 实现），Controller / 启动类 / yml 搬到 demo 模块，框架 pom 摘掉 web / mysql / maven-plugin。**框架 25 个文件零业务，demo 8 个文件全业务**，依赖方向 demo → 框架 | **敲 43 号之前先看这份**（它改的是 43 号的落地形态）。第 4 节 A1~A4 是本单新增的验收：框架零业务 grep / 忘提供 roles 启动失败 / MCP 通道拼错启动失败 / 纯对话角色 |
+| [45](43-ai-orchestrator完整模块.md#05-三次修订记录先读这个代码已和初版不同) | **Lombok 化 + 修 3 个 Jackson 断点**（改动已直接并入 43/44 号，无独立文档）：19 个手写访问器 → `@Getter/@Setter`；修掉 record 风格 getter（Jackson 不认 → 序列化出残骸）、`isDone()`/`isFailed()` 被当属性（反序列化抛异常）、`Instant` 缺 `JavaTimeModule` 三个**编译全过、运行期断裂**的 bug；`RedisRunStateStore` 改专用 mapper。**全类型往返探针 11/11 通过**（`docs/probes/JacksonProbe2.java`） | 43 号第 0.5 节有完整记录；第 14 节是探针的跑法和"什么时候必须重跑" |
 
 ---
 
@@ -127,3 +137,26 @@
 ## 相关的其他交付
 
 - AI-Common 的观测性扩展 → 已整理成 [交付单 08](08-AI-Common-观测性与Token统计.md)
+
+---
+
+## AgentScope Java 学习系列（46–62）
+
+一套**手写练习**：新模块 `ai-agentscope`，是一个 **Spring Boot Web 应用**（MVC），每章吃透一个 Harness 功能，
+每章通过 REST 端点验收（`mvn spring-boot:run` + curl）。模型走**自建注册表**（对齐 ai-common 的 `ModelRegister`：
+yml `ai.models.*` → `ModelRegistrar` → AgentScope `ModelRegistry`，agent 里 `.model("fast")` 按名引用），
+**不用 agentscope starter**，**不接 ai-common / ai-memory**（学习舱，隔离才能学清）。版本锁定 AgentScope **2.0.4**。
+
+| 篇 | 内容 | 验收方式 | 状态 |
+|---|---|---|---|
+| [46](46-AgentScope学习计划总纲.md) | 总纲：Spring Boot 骨架 + **模型注册表四件套**（ModelSpec/ModelProperties/ModelRegistrar/GenerateDefaults）+ 16 章索引 + 排障表 | 启动日志出现 `[model-registry] 已注册模型：[strong, fast]` | ☐ |
+| [47](47-第1章-HarnessAgent生命周期与第一次调用.md) | 第 1 章：Builder @Bean（`.model("fast")`）+ 第一个 Controller；build/call/close 生命周期 + RuntimeContext 身份三元组 | 两个 curl 同一 sessionId，第二轮答出第一轮的信息；6 个实验 | ☐ |
+| [48](48-第2章-模型层-注册表与容错三件套.md) | 第 2 章：注册表链路 + ModelProbeController（capabilities/ask/agent-ask）+ maxRetries/fallbackModel/failoverListener + 端点实测表 | capabilities 返回 fast+strong；`AI_MODEL` 设坏 → strong 顶上且出现 `[failover]` | ☐ |
+| [49](49-第3章-消息与事件流-从SSE到重建一条回复.md) | 第 3 章：Msg 里层结构 + 31 类事件协议 + `Flux.using` SSE 端点 + EventAssembler 从事件重建回复 | `curl -N` 看到完整事件序列；`assembled.matchesResultEvent=true` | ☐ |
+| [50](50-第4章-工具系统-注解Schema与三条返回路径.md) | 第 4 章：`@Tool`/`@ToolParam` 注解驱动 + Toolkit 注册 + Schema 生成 + 三条返回路径（成功/ERROR/挂起）+ `ExecutionConfig` 容错 | `/tool/schemas` 三工具；`/tool/call` 分别拿到 `RUNNING` / `ERROR` | ☐ |
+| [51](51-第5章-权限与HITL-五模式规则与人点头才执行.md) | 第 5 章：四行为（含 `PASSTHROUGH`）+ 五模式矩阵 + 四层判定链路 + deny/ask 规则 + HITL 事件协议 + `ToolSuspendException` 挂起 | `/permission/matrix` 五行与文档表一致；3 个规则实验（deny 压 BYPASS / `ruleContent` 只能 null / allow 不参与判定） | ☐ |
+| 52–61 | 第 6–15 章：上下文 / 记忆 / 工作区 / 沙箱 / 计划模式 / 会话恢复 / Middleware / 子 Agent / Skill / Channel | 待出 | ☐ |
+| 62 | 第 16 章：毕业项目——多 Agent Spring Boot 服务全功能组合 | 待出 | ☐ |
+
+**建议节奏**：总纲 → 第 1 章 → 第 2 章，先把「会说话」跑通再往下。每章检查点过了再进下一篇；
+第 9/10/14 章需要 Docker，装不了就跳过沙箱部分，不影响其余。

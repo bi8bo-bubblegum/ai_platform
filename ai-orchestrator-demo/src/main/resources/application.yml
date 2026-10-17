@@ -1,0 +1,98 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: ai-orchestrator-demo      # 会成为 assistantId，所以服务名要唯一
+  datasource:
+    url: jdbc:mysql://localhost:3306/mcp_gateway?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:root}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+ai:
+  orchestrator:
+    # assistant-id 可以不配 —— 缺省取 spring.application.name。
+    # ★ 它是双重标识（暂停状态命名空间 + 长期记忆 source_assistant），
+    #   重复会静默串号，所以服务名一定要唯一。
+    assistant-id: ai-orchestrator-demo
+    approval-min-risk: high        # 达到或超过这个等级就要人工批准
+    max-rounds: 6                  # 主循环轮次上限（刹车，不是目的地）
+    no-progress-limit: 2           # 连续几轮没有新完成的子任务就收敛
+    max-parallel: 3                # 同一批最多并行几个子任务
+    token-budget: 200000           # 单次运行的 token 上限
+    per-task-token-budget: 30000   # 单个子任务的 token 上限
+    max-tool-rounds: 5             # 单个子任务的工具轮次上限
+    conversation-turns: 10         # 带进 Planner / Synthesizer 的对话历史条数
+    run-ttl-hours: 24              # 暂停状态的 TTL
+
+    # ★ 角色表不在这里配 —— 它是业务知识，在 role/Roles.java 里定义成枚举。
+    #   每个角色一个 RoleRules 实现类（准则），加一个专家 = 加一个枚举值 + 一个类。
+
+  # 向量模型（长期记忆召回要用）。★ 曾经整个 demo 缺这一段 → profile 为 null →
+  # EmbeddingModelRegister.getDefault() 对 ConcurrentHashMap.computeIfAbsent(null) → NPE，
+  # 启动堆栈最底只有一句没有信息的 "message: null"（43 号从没跑起来过，所以没发现）。
+  embed:
+    profile: default
+    dimensions: 1536
+    timeout: 5s
+    max-retries: 3
+    endpoints:
+      default:
+        base-url: ${CLOSEAI_BASE_URL}
+        api-key: ${CLOSEAI_API_KEY}
+        model-name: text-embedding-3-small
+
+  mcp:
+    enabled: true
+    tool-timeout: 60s
+    risk-cache-ttl: 60s
+    servers:
+      # key = 角色声明的 mcpClientKey；token 决定这个通道能看到哪些工具
+      order:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_5vfkI-Qv-xYFQYbxYdTW4b-RM-zb0kmltw4CfTXWrDo"
+        timeout: 30s
+      analysis:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_Cs9fX_PPVWgqOyn1bz-Ov3sb6xJwKanVRwU09D26Dbw"
+        timeout: 30s
+      knowledge:
+        transport: http
+        url: http://127.0.0.1:8800/mcp/
+        headers:
+          Authorization: "Bearer gw_brYcj6XznQE2DbG5uv0kT-2xYU_OpvfXU9FtiACp1JQ"
+        timeout: 30s
+
+  chat:
+    profile: free
+    temperature: 0.7
+    max-tokens: 2000
+    timeout: 60s
+    endpoints:
+      free:
+        base-url: ${GATEWAY_BASE_URL}
+        api-key: ${GATEWAY_API_KEY}
+        model-name: best-1-nothinking
+
+  memory:
+    session:
+      store: redis
+      max-messages: 20
+      summary-enabled: true
+      summary-ttl: 96h
+      ttl: 48h
+    user:
+      enabled: true
+      top-k: 5
+      min-score: 0.30
+      extract-profile: free
+      dedup-threshold: 0.95
+      max-facts-per-user: 500

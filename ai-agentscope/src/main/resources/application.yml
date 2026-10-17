@@ -1,0 +1,16 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: ai-agentscope
+ai:
+  models:
+    fast:
+      base-url: ${GATEWAY_BASE_URL:http://ai-gateway.tz.com/v1}
+      api-key: ${GATEWAY_API_KEY}
+      model-name: best-1
+      temperature: 0.2
+    strong:
+      base-url: ${GATEWAY_BASE_URL:http://ai-gateway.tz.com/v1}
+      api-key: ${GATEWAY_API_KEY}
+      model-name: deepseek-flash

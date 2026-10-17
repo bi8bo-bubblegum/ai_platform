@@ -10,10 +10,11 @@
     <packaging>pom</packaging>
     <modules>
         <module>ai-common</module>
-        <module>assistant-demo</module>
         <module>ai-memory</module>
-        <module>ai-multiagent</module>
-        <module>ai-graph</module>
+        <module>assistant-demo</module>
+        <module>ai-orchestrator</module>
+        <module>ai-orchestrator-demo</module>
+        <module>ai-agentscope</module>
     </modules>
 
     <parent>
@@ -27,6 +28,7 @@
         <java.version>17</java.version>
         <langchain4j.version>1.20.0</langchain4j.version>
         <langgraph4j.version>1.9.2</langgraph4j.version>
+        <agentscope.version>2.0.4</agentscope.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
