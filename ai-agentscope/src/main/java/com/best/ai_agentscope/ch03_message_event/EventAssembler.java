@@ -15,7 +15,7 @@ public class EventAssembler {
     private String resultEventText;
     private boolean resultEventSeen = false;
 
-    private void accept(AgentEvent event){
+    public void accept(AgentEvent event){
         if(event instanceof AgentStartEvent start){
             this.replyId = start.getReplyId();
         } else if (event instanceof TextBlockDeltaEvent delta){
